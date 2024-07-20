@@ -1,19 +1,22 @@
 """Sensor platform for TOR Check custom component."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 
-from .const import ATTR_REAL_IP, ATTR_TOR_CONNECTED, DOMAIN
-from .coordinator import (
-    KEY_MY_IP,
-    KEY_MY_TOR_IP,
-    KEY_TOR_CONNECTED,
-    TorCheckDataUpdateCoordinator,
-)
+from .const import ATTR_REAL_IP, ATTR_TOR_CONNECTED
+from .coordinator import KEY_MY_IP, KEY_MY_TOR_IP, KEY_TOR_CONNECTED
 from .entity import TorCheckEntity
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .coordinator import TorCheckDataUpdateCoordinator
+    from .data import TorCheckConfigEntry
 
 ENTITY_DESCRIPTIONS = (
     SensorEntityDescription(
@@ -24,12 +27,15 @@ ENTITY_DESCRIPTIONS = (
 )
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(
+    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
+    entry: TorCheckConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
     """Set up the sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_devices(
+    async_add_entities(
         TorCheckSensor(
-            coordinator=coordinator,
+            coordinator=entry.runtime_data.coordinator,
             entity_description=entity_description,
         )
         for entity_description in ENTITY_DESCRIPTIONS

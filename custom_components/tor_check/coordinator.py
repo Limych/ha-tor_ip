@@ -1,23 +1,26 @@
 """DataUpdateCoordinator for TOR Check custom integration."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 import homeassistant.util.dt as dt_util
 
 from .api import (
-    TorCheckApiClient,
     TorCheckApiClientAuthenticationError,
     TorCheckApiClientCommunicationError,
     TorCheckApiClientError,
 )
 from .const import DOMAIN, LOGGER
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from .data import TorCheckConfigEntry
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -32,17 +35,15 @@ KEY_TOR_CONNECTED = "tor_connected"
 class TorCheckDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
-    config_entry: ConfigEntry
+    config_entry: TorCheckConfigEntry
 
     _cache: dict[str : list[datetime, any]] = {}
 
     def __init__(
         self,
         hass: HomeAssistant,
-        client: TorCheckApiClient,
     ) -> None:
         """Initialize."""
-        self.client = client
         super().__init__(
             hass=hass,
             logger=LOGGER,
@@ -77,13 +78,13 @@ class TorCheckDataUpdateCoordinator(DataUpdateCoordinator):
             if data[KEY_TOR_EXIT_NODES] == {}:
                 data[KEY_TOR_EXIT_NODES] = self._cache_set(
                     KEY_TOR_EXIT_NODES,
-                    await self.client.async_get_tor_exit_nodes(),
+                    await self.config_entry.runtime_data.client.async_get_tor_exit_nodes(),
                     timedelta(days=1),
                 )
             if data[KEY_MY_TOR_IP] is None:
                 data[KEY_MY_TOR_IP] = self._cache_set(
                     KEY_MY_TOR_IP,
-                    await self.client.async_get_my_tor_ip(),
+                    await self.config_entry.runtime_data.client.async_get_my_tor_ip(),
                 )
         except TorCheckApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
@@ -96,7 +97,7 @@ class TorCheckDataUpdateCoordinator(DataUpdateCoordinator):
             if data[KEY_MY_IP] is None:
                 data[KEY_MY_IP] = self._cache_set(
                     KEY_MY_IP,
-                    await self.client.async_get_my_ip(),
+                    await self.config_entry.runtime_data.client.async_get_my_ip(),
                 )
         except TorCheckApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception

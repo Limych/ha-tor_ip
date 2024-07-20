@@ -3,12 +3,13 @@
 For more details about this integration, please refer to
 https://github.com/limych/ha-tor_check
 """
+
 from __future__ import annotations
 
 import logging
 from ssl import SSLContext
 from types import MappingProxyType
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import aiohttp
 from aiohttp.hdrs import USER_AGENT
@@ -31,7 +32,7 @@ from homeassistant.helpers.aiohttp_client import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.frame import warn_use
 from homeassistant.helpers.json import json_dumps
-from homeassistant.loader import bind_hass
+from homeassistant.loader import async_get_loaded_integration, bind_hass
 from homeassistant.util import ssl as ssl_util
 
 from .api import TorCheckApiClient
@@ -44,6 +45,12 @@ from .const import (
     ConfigType,
 )
 from .coordinator import TorCheckDataUpdateCoordinator
+from .data import TorCheckData
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from .data import TorCheckConfigEntry
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -191,17 +198,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: TorCheckConfigEntry) -> bool:
     """Set up this integration using UI."""
     proxy_url = f"socks5://{entry.data[CONF_TOR_HOST]}:{entry.data[CONF_TOR_PORT]}"
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator = TorCheckDataUpdateCoordinator(
-        hass=hass,
+    coordinator = TorCheckDataUpdateCoordinator(hass)
+    entry.runtime_data = TorCheckData(
         client=TorCheckApiClient(
             session=async_get_clientsession(hass),
             tor_session=async_create_proxy_clientsession(hass, proxy_url),
         ),
+        integration=async_get_loaded_integration(hass, entry.domain),
+        coordinator=coordinator,
     )
     # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
     await coordinator.async_config_entry_first_refresh()
