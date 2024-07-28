@@ -1,14 +1,18 @@
 """Sample API Client."""
+
 from __future__ import annotations
 
-import asyncio
+import logging
 import socket
+from typing import Final
 
 import aiohttp
 import async_timeout
 import python_socks
 
-TOR_CHECK_URL = "https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=1.1.1.1"
+_LOGGER: Final = logging.getLogger(__name__)
+
+
 IPIFY_API_URL = "https://api.ipify.org"
 
 
@@ -26,6 +30,7 @@ class TorCheckApiClientAuthenticationError(TorCheckApiClientError):
 
 async def _async_get_data(session: aiohttp.ClientSession, url: str) -> any:
     """Fetch data from remote server."""
+    _LOGGER.debug("Fetch data from URL %s", url)
     try:
         async with async_timeout.timeout(10):
             response = await session.request(
@@ -37,7 +42,7 @@ async def _async_get_data(session: aiohttp.ClientSession, url: str) -> any:
             response.raise_for_status()
             return await response.text()
 
-    except asyncio.TimeoutError as exception:
+    except TimeoutError as exception:
         raise TorCheckApiClientCommunicationError(
             "Timeout error fetching information",
         ) from exception
@@ -46,6 +51,7 @@ async def _async_get_data(session: aiohttp.ClientSession, url: str) -> any:
         socket.gaierror,
         python_socks.ProxyConnectionError,
     ) as exception:
+        _LOGGER.error(exception)
         raise TorCheckApiClientCommunicationError(
             "Error fetching information",
         ) from exception
@@ -65,10 +71,6 @@ class TorCheckApiClient:
         self._session = session
         self._tor_session = tor_session
 
-    async def async_get_tor_exit_nodes(self) -> list[str]:
-        """Get list of exit nodes from the TOR."""
-        return (await _async_get_data(self._session, TOR_CHECK_URL)).split()
-
     async def async_get_my_tor_ip(self) -> str:
         """Get my current IP from the TOR."""
         return await _async_get_data(self._tor_session, IPIFY_API_URL)
@@ -76,3 +78,26 @@ class TorCheckApiClient:
     async def async_get_my_ip(self) -> str:
         """Get my current real IP."""
         return await _async_get_data(self._session, IPIFY_API_URL)
+
+    @staticmethod
+    async def async_is_tor_ip(ip: str) -> bool:
+        """Check is IP are from TOR network."""
+        if ip is None:
+            return False
+        hostname = ".".join(reversed(ip.split("."))) + ".dnsel.torproject.org"
+
+        _LOGGER.debug("Fetch IPv4 from DNS for %s", hostname)
+        try:
+            async with async_timeout.timeout(10):
+                _ = socket.getaddrinfo(hostname, 0)  # port, required
+            return True
+        except socket.gaierror:
+            return False
+        except TimeoutError as exception:
+            raise TorCheckApiClientCommunicationError(
+                "Timeout error fetching information",
+            ) from exception
+        except Exception as exception:  # pylint: disable=broad-except
+            raise TorCheckApiClientError(
+                "Something really wrong happened!"
+            ) from exception
