@@ -6,7 +6,7 @@ LOGGER: Logger = getLogger(__package__)
 
 NAME: Final = "TOR Check"
 DOMAIN: Final = "tor_check"
-VERSION: Final = "0.1.1-alpha"
+VERSION: Final = "0.2.0"
 ATTRIBUTION: Final = "Data provided by TOR network"
 ISSUE_URL: Final = "https://github.com/Limych/ha-tor_check/issues"
 
