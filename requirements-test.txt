@@ -1,4 +1,6 @@
 -r requirements.txt
+aiohttp
+aioresponses
 async-timeout
 asynctest~=0.13
 colorlog~=6.8

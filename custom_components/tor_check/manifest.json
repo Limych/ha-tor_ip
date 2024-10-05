@@ -10,7 +10,8 @@
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/Limych/ha-tor_check/issues",
     "requirements": [
+        "pip>=21.3.1",
         "aiohttp-socks~=0.8"
     ],
-    "version": "0.2.0"
+    "version": "0.2.1-alpha"
 }

@@ -1,4 +1,5 @@
 """Constants for TOR Check custom component."""
+
 from logging import Logger, getLogger
 from typing import Any, Final
 
@@ -6,7 +7,7 @@ LOGGER: Logger = getLogger(__package__)
 
 NAME: Final = "TOR Check"
 DOMAIN: Final = "tor_check"
-VERSION: Final = "0.2.0"
+VERSION: Final = "0.2.1-alpha"
 ATTRIBUTION: Final = "Data provided by TOR network"
 ISSUE_URL: Final = "https://github.com/Limych/ha-tor_check/issues"
 
